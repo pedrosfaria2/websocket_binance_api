@@ -60,6 +60,13 @@ This project is a WebSocket client for interacting with the Binance API. It allo
 - **List Subscriptions**: List current subscriptions (placeholder).
 - **Exit**: Exit the application.
 
+## Running Tests
+
+The project includes unit tests for various components. To run the tests, use the following command:
+
+```sh
+cargo test
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
