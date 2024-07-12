@@ -18,6 +18,3 @@ inquire = "0.7.5"
 unreachable = "1.0.0"
 reqwest = { version = "0.12.5", features = ["json"] }
 libc = "0.2"
-
-[dev-dependencies]
-warp = "0.3"
