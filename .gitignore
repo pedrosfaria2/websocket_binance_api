@@ -1,0 +1,152 @@
+# Ignore Mac system files
+.DS_Store
+
+# Ignore Windows system files
+Thumbs.db
+
+# Ignore Python bytecode files
+__pycache__/
+*.py[cod]
+
+# Ignore Rust build artifacts
+target/
+**/*.rs.bk
+
+# Ignore IDE and editor specific files
+
+# Eclipse
+.metadata
+.classpath
+.project
+.cproject
+.settings/
+*.launch
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# NetBeans
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# Vim
+*.swp
+*.swo
+*.swn
+
+# Visual Studio Code
+.vscode/
+.history/
+.vscode-test/
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# JetBrains Rider
+.idea/
+*.sln
+*.csproj
+*.unityproj
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Emacs
+*~
+\#*\#
+
+# Rust/Cargo
+target/
+Cargo.lock
+**/*.rs.bk
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Custom build directories
+build/
+dist/
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swm
+*.swo
+*.swn
+
+# Compiled files
+*.o
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Ignore by file extension
+*.class
+*.war
+*.ear
+*.jar
+
+# Miscellaneous
+*.tmp
+*.cache
+*.pid
+*.seed
+*.pid.lock
+
+# Ignore .env files (if any)
+.env
+.env.local
+.env.*.local
+.envrc
+.env.test
+
+# Ignore .terraform directories
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Ignore virtual environment directories
+venv/
+.virtualenv/
+ENV/
+env.bak/
+env/
+
+# Ignore systemd unit files
+*.service
+
+# Ignore output of linters
+clippy.out
+
+# Ignore Rust analyzer files
+*.rs.bk
+
+# Ignore test coverage output
+coverage/
+*.lcov
+
+# Ignore build output
+/target/
+out/
