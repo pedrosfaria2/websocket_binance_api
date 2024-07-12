@@ -8,7 +8,6 @@ This project is a WebSocket client for interacting with the Binance API. It allo
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Contributing](#contributing)
 - [License](#license)
 
 ## Features
@@ -63,6 +62,9 @@ This project is a WebSocket client for interacting with the Binance API. It allo
 ## Running Tests
 
 The project includes unit tests for various components. To run the tests, use the following command:
+```sh
+cargo test
+```
 
 ## License
 
