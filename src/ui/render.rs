@@ -5,8 +5,8 @@ use tui::style::{Color, Style};
 use tui::text::{Span, Spans};
 use tui::widgets::{Axis, Block, Borders, Cell, Chart, Dataset, Gauge, Paragraph, Row, Table};
 
-pub struct RenderData {
-    pub trades: Vec<AggTrade>,
+pub struct RenderData<'a> {
+    pub trades: &'a [AggTrade],
     pub avg_price: f64,
     pub median_price: f64,
     pub std_dev: f64,
@@ -18,7 +18,7 @@ pub struct RenderData {
     pub sma: f64,
     pub rsi: f64,
     pub last_price: f64,
-    pub prices: Vec<(f64, f64)>,
+    pub prices: &'a [(f64, f64)],
     pub buyer_maker_count: (usize, usize),
 }
 
@@ -33,7 +33,7 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
                 Constraint::Percentage(25),
                 Constraint::Percentage(25),
             ]
-            .as_ref(),
+                .as_ref(),
         )
         .split(f.size());
 
@@ -48,7 +48,7 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
         Cell::from("Timestamp"),
         Cell::from("Buyer Maker"),
     ])
-    .style(Style::default().fg(Color::Yellow).bg(Color::Blue));
+        .style(Style::default().fg(Color::Yellow).bg(Color::Blue));
 
     // Table rows
     let trades: Vec<Row> = data
@@ -56,7 +56,7 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
         .iter()
         .map(|trade| {
             Row::new(vec![
-                Cell::from(trade.symbol.clone()),
+                Cell::from(trade.symbol.as_str()),
                 Cell::from(trade.trade_id.to_string()),
                 Cell::from(format!("{:.2}", trade.price)),
                 Cell::from(format!("{:.4}", trade.quantity)),
@@ -67,7 +67,7 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
                     trade.timestamp.format("%Y-%m-%d %H:%M:%S"),
                     trade.timestamp.timestamp_subsec_millis()
                 )),
-                Cell::from(if trade.is_buyer_maker { "Buy" } else { "Sell" }.to_string()),
+                Cell::from(if trade.is_buyer_maker { "Buy" } else { "Sell" }),
             ])
         })
         .collect();
@@ -100,7 +100,7 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
                 Constraint::Percentage(25),
                 Constraint::Percentage(50),
             ]
-            .as_ref(),
+                .as_ref(),
         )
         .split(chunks[1]);
 
@@ -123,7 +123,7 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
         Spans::from(vec![Span::raw(format!("EMA: {:.2}", data.ema))]),
         Spans::from(vec![Span::raw(format!("SMA: {:.2}", data.sma))]),
     ])
-    .block(Block::default().borders(Borders::ALL).title("Statistics"));
+        .block(Block::default().borders(Borders::ALL).title("Statistics"));
 
     // Render statistics column 1
     f.render_widget(stats_column_1, stats_chunks[0]);
@@ -144,11 +144,11 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
         ))]),
         Spans::from(vec![Span::raw(format!("RSI: {:.2}", data.rsi))]),
     ])
-    .block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title("Statistics (contd.)"),
-    );
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Statistics (contd.)"),
+        );
 
     // Render statistics column 2
     f.render_widget(stats_column_2, stats_chunks[1]);
@@ -205,7 +205,7 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
         .name("Prices")
         .marker(tui::symbols::Marker::Block)
         .style(Style::default().fg(Color::Cyan))
-        .data(&data.prices)];
+        .data(data.prices)];
 
     // Chart widget
     let chart = Chart::new(datasets)
