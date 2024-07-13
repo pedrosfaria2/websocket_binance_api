@@ -1,6 +1,8 @@
-use tokio::sync::oneshot::Sender;
+use tokio::sync::mpsc::Sender;
 
 pub async fn handle_shutdown(shutdown_tx: Sender<()>) {
+    // Wait for Ctrl+C signal
     tokio::signal::ctrl_c().await.unwrap();
-    let _ = shutdown_tx.send(());
+    // Send shutdown signal
+    let _ = shutdown_tx.send(()).await;
 }

@@ -13,9 +13,11 @@ where
     loop {
         tokio::select! {
             _ = ping_interval.tick() => {
+                // Send ping message at regular intervals
                 write.send(Message::Ping(Vec::new())).await.unwrap();
             },
             _ = &mut shutdown_rx => {
+                // Shutdown WebSocket connection
                 println!("Shutting down WebSocket...");
                 write.send(Message::Close(None)).await.unwrap();
                 break;
@@ -93,6 +95,7 @@ mod tests {
             }
         }
 
+        // Verify ping and close messages were sent
         assert!(messages.iter().any(|msg| matches!(msg, Message::Ping(_))));
         assert!(messages.iter().any(|msg| matches!(msg, Message::Close(_))));
     }

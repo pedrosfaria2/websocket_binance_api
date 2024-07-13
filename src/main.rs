@@ -1,8 +1,8 @@
-mod websocket;
-mod storage;
 mod menu;
-mod ui;
+mod storage;
 mod subscription;
+mod ui;
+mod websocket;
 
 use menu::show_menu;
 

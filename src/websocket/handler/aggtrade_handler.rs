@@ -1,19 +1,24 @@
+use crate::storage::aggtrade_storage::AggTradeStorage;
+use crate::ui::render::{render_ui, RenderData};
+use crate::websocket::handler::input::handle_input;
 use crate::websocket::message::parse_agg_trade;
-use crate::storage::aggtrade_storage::{AggTradeStorage};
-use std::sync::{Arc, Mutex};
+use crossterm::{
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
 use futures_util::StreamExt;
-use tokio_tungstenite::tungstenite::protocol::Message;
-use std::io::stdout;
-use crossterm::{execute, terminal::{EnterAlternateScreen, LeaveAlternateScreen, enable_raw_mode, disable_raw_mode}};
 use serde_json::Value;
+use std::io::stdout;
+use std::sync::{Arc, Mutex};
+use tokio::sync::mpsc;
+use tokio_tungstenite::tungstenite::protocol::Message;
 use tui::backend::CrosstermBackend;
 use tui::Terminal;
-use crate::ui::render::{render_ui, RenderData};
-use crate::websocket::{input};
 
-pub async fn handle_messages<S>(
+pub async fn handle_aggtrade_messages<S>(
     mut read: S,
     storage: Arc<Mutex<AggTradeStorage>>,
+    mut shutdown_rx: mpsc::Receiver<()>,
 ) where
     S: StreamExt<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
 {
@@ -25,23 +30,15 @@ pub async fn handle_messages<S>(
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.clear().unwrap();
 
-    // Create a channel to receive the shutdown signal
-    let (shutdown_tx, mut shutdown_rx) = tokio::sync::mpsc::channel(1);
-
-    // Clone the shutdown_tx for use in the ctrl_c handler
-    let shutdown_tx_clone = shutdown_tx.clone();
-
-    // Spawn a task to listen for Ctrl+C and send the shutdown signal
+    // Channel for user input shutdown signal
+    let (input_tx, mut input_rx) = mpsc::channel(1);
     tokio::spawn(async move {
-        tokio::signal::ctrl_c().await.expect("failed to listen for event");
-        shutdown_tx_clone.send(()).await.expect("failed to send shutdown signal");
+        handle_input(input_tx).await;
     });
-
-    // Create a separate thread to handle user input
-    let input_handle = input::handle_input(shutdown_tx);
 
     'main_loop: loop {
         tokio::select! {
+            // Handle incoming messages
             Some(message) = read.next() => {
                 match message {
                     Ok(Message::Text(text)) => {
@@ -59,8 +56,6 @@ pub async fn handle_messages<S>(
 
                                 // Prepare data for display
                                 let trades: Vec<_> = storage.get_trades().iter().rev().take(20).cloned().collect();
-
-                                // Prepare data for the chart
                                 let prices: Vec<(f64, f64)> = storage.get_trades().iter().map(|trade| (trade.timestamp.timestamp_millis() as f64, trade.price)).collect();
 
                                 // Create RenderData
@@ -88,15 +83,18 @@ pub async fn handle_messages<S>(
                     _ => {}
                 }
             },
+            // Handle shutdown signal
             _ = shutdown_rx.recv() => {
                 println!("Received shutdown signal.");
                 break 'main_loop;
             },
+            // Handle input shutdown signal
+            _ = input_rx.recv() => {
+                println!("Received input shutdown signal.");
+                break 'main_loop;
+            },
         }
     }
-
-    // Wait for the input handling thread to finish
-    input_handle.await.unwrap();
 
     // Restore terminal
     disable_raw_mode().unwrap();
