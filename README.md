@@ -51,8 +51,11 @@ This project is a comprehensive WebSocket client designed to interact with the B
     ```sh
     cargo run
     ```
+   
+
 
 2. Follow the on-screen menu to subscribe to various streams.
+3. *Only the AggTrade has been implemented so far!*
 
 ### Menu Options
 
