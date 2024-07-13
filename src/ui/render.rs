@@ -62,7 +62,7 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
                 Cell::from(format!("{:.4}", trade.quantity)),
                 Cell::from(trade.first_trade_id.to_string()),
                 Cell::from(trade.last_trade_id.to_string()),
-                Cell::from(trade.timestamp.format("%Y-%m-%d %H:%M:%S").to_string()),
+                Cell::from(format!("{}.{}", trade.timestamp.format("%Y-%m-%d %H:%M:%S"), trade.timestamp.timestamp_subsec_millis())),
                 Cell::from(if trade.is_buyer_maker { "Buy" } else { "Sell" }.to_string()),
             ])
         })
@@ -79,7 +79,7 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
             Constraint::Length(10),
             Constraint::Length(15),
             Constraint::Length(15),
-            Constraint::Length(20),
+            Constraint::Length(24),
             Constraint::Length(15),
         ]);
 
