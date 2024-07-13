@@ -145,12 +145,18 @@ impl AggTradeStorage {
 
     // Calculate the maximum price of trades
     pub fn calculate_max_price(&self) -> Option<f64> {
-        self.trades.iter().map(|trade| trade.price).max_by(|a, b| a.partial_cmp(b).unwrap())
+        self.trades
+            .iter()
+            .map(|trade| trade.price)
+            .max_by(|a, b| a.partial_cmp(b).unwrap())
     }
 
     // Calculate the minimum price of trades
     pub fn calculate_min_price(&self) -> Option<f64> {
-        self.trades.iter().map(|trade| trade.price).min_by(|a, b| a.partial_cmp(b).unwrap())
+        self.trades
+            .iter()
+            .map(|trade| trade.price)
+            .min_by(|a, b| a.partial_cmp(b).unwrap())
     }
 
     // Calculate the Exponential Moving Average (EMA)
@@ -159,7 +165,13 @@ impl AggTradeStorage {
             return None;
         }
         let k = 2.0 / (period + 1) as f64;
-        let mut ema = self.trades.iter().take(period).map(|trade| trade.price).sum::<f64>() / period as f64;
+        let mut ema = self
+            .trades
+            .iter()
+            .take(period)
+            .map(|trade| trade.price)
+            .sum::<f64>()
+            / period as f64;
         for trade in self.trades.iter().skip(period) {
             ema = trade.price * k + ema * (1.0 - k);
         }
@@ -171,7 +183,15 @@ impl AggTradeStorage {
         if self.trades.len() < period {
             return None;
         }
-        Some(self.trades.iter().rev().take(period).map(|trade| trade.price).sum::<f64>() / period as f64)
+        Some(
+            self.trades
+                .iter()
+                .rev()
+                .take(period)
+                .map(|trade| trade.price)
+                .sum::<f64>()
+                / period as f64,
+        )
     }
 
     // Calculate the Relative Strength Index (RSI)
@@ -182,7 +202,8 @@ impl AggTradeStorage {
         let mut gains = 0.0;
         let mut losses = 0.0;
         for i in 1..=period {
-            let change = self.trades[self.trades.len() - i].price - self.trades[self.trades.len() - i - 1].price;
+            let change = self.trades[self.trades.len() - i].price
+                - self.trades[self.trades.len() - i - 1].price;
             if change > 0.0 {
                 gains += change;
             } else {

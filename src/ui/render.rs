@@ -3,7 +3,7 @@ use tui::backend::Backend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::style::{Color, Style};
 use tui::text::{Span, Spans};
-use tui::widgets::{Axis, Block, Borders, Cell, Chart, Dataset, Paragraph, Row, Table, Gauge};
+use tui::widgets::{Axis, Block, Borders, Cell, Chart, Dataset, Gauge, Paragraph, Row, Table};
 
 pub struct RenderData {
     pub trades: Vec<AggTrade>,
@@ -33,7 +33,7 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
                 Constraint::Percentage(25),
                 Constraint::Percentage(25),
             ]
-                .as_ref(),
+            .as_ref(),
         )
         .split(f.size());
 
@@ -48,7 +48,7 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
         Cell::from("Timestamp"),
         Cell::from("Buyer Maker"),
     ])
-        .style(Style::default().fg(Color::Yellow).bg(Color::Blue));
+    .style(Style::default().fg(Color::Yellow).bg(Color::Blue));
 
     // Table rows
     let trades: Vec<Row> = data
@@ -62,7 +62,11 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
                 Cell::from(format!("{:.4}", trade.quantity)),
                 Cell::from(trade.first_trade_id.to_string()),
                 Cell::from(trade.last_trade_id.to_string()),
-                Cell::from(format!("{}.{}", trade.timestamp.format("%Y-%m-%d %H:%M:%S"), trade.timestamp.timestamp_subsec_millis())),
+                Cell::from(format!(
+                    "{}.{}",
+                    trade.timestamp.format("%Y-%m-%d %H:%M:%S"),
+                    trade.timestamp.timestamp_subsec_millis()
+                )),
                 Cell::from(if trade.is_buyer_maker { "Buy" } else { "Sell" }.to_string()),
             ])
         })
@@ -96,33 +100,55 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
                 Constraint::Percentage(25),
                 Constraint::Percentage(50),
             ]
-                .as_ref(),
+            .as_ref(),
         )
         .split(chunks[1]);
 
     // Statistics paragraph column 1
     let stats_column_1 = Paragraph::new(vec![
-        Spans::from(vec![Span::raw(format!("Last Price: {:.2}", data.last_price))]),
-        Spans::from(vec![Span::raw(format!("Average Price: {:.2}", data.avg_price))]),
-        Spans::from(vec![Span::raw(format!("Median Price: {:.2}", data.median_price))]),
+        Spans::from(vec![Span::raw(format!(
+            "Last Price: {:.2}",
+            data.last_price
+        ))]),
+        Spans::from(vec![Span::raw(format!(
+            "Average Price: {:.2}",
+            data.avg_price
+        ))]),
+        Spans::from(vec![Span::raw(format!(
+            "Median Price: {:.2}",
+            data.median_price
+        ))]),
         Spans::from(vec![Span::raw(format!("Max Price: {:.2}", data.max_price))]),
         Spans::from(vec![Span::raw(format!("Min Price: {:.2}", data.min_price))]),
         Spans::from(vec![Span::raw(format!("EMA: {:.2}", data.ema))]),
         Spans::from(vec![Span::raw(format!("SMA: {:.2}", data.sma))]),
     ])
-        .block(Block::default().borders(Borders::ALL).title("Statistics"));
+    .block(Block::default().borders(Borders::ALL).title("Statistics"));
 
     // Render statistics column 1
     f.render_widget(stats_column_1, stats_chunks[0]);
 
     // Statistics paragraph column 2
     let stats_column_2 = Paragraph::new(vec![
-        Spans::from(vec![Span::raw(format!("VWAP: {:.2}", data.volume_weighted_avg_price))]),
-        Spans::from(vec![Span::raw(format!("Total Volume: {:.4}", data.total_volume))]),
-        Spans::from(vec![Span::raw(format!("Standard Deviation: {:.2}", data.std_dev))]),
+        Spans::from(vec![Span::raw(format!(
+            "VWAP: {:.2}",
+            data.volume_weighted_avg_price
+        ))]),
+        Spans::from(vec![Span::raw(format!(
+            "Total Volume: {:.4}",
+            data.total_volume
+        ))]),
+        Spans::from(vec![Span::raw(format!(
+            "Standard Deviation: {:.2}",
+            data.std_dev
+        ))]),
         Spans::from(vec![Span::raw(format!("RSI: {:.2}", data.rsi))]),
     ])
-        .block(Block::default().borders(Borders::ALL).title("Statistics (contd.)"));
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Statistics (contd.)"),
+    );
 
     // Render statistics column 2
     f.render_widget(stats_column_2, stats_chunks[1]);
@@ -139,11 +165,23 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
 
     // Gauge for buyer maker percentages
     let buyer_maker_gauge = Gauge::default()
-        .block(Block::default().borders(Borders::ALL).title("Buyer Maker Distribution"))
-        .gauge_style(Style::default().fg(Color::Magenta).bg(Color::Black).add_modifier(tui::style::Modifier::ITALIC))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Buyer Maker Distribution"),
+        )
+        .gauge_style(
+            Style::default()
+                .fg(Color::Magenta)
+                .bg(Color::Black)
+                .add_modifier(tui::style::Modifier::ITALIC),
+        )
         .percent(buyer_maker_true_percent as u16)
         .label(Span::styled(
-            format!("Buy: {:.1}%, Sell: {:.1}%", buyer_maker_true_percent, buyer_maker_false_percent),
+            format!(
+                "Buy: {:.1}%, Sell: {:.1}%",
+                buyer_maker_true_percent, buyer_maker_false_percent
+            ),
             Style::default().add_modifier(tui::style::Modifier::BOLD),
         ));
 
