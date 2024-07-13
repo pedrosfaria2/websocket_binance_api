@@ -58,6 +58,11 @@ impl<'de> Deserialize<'de> for AggTrade {
 pub struct AggTradeStorage {
     trades: VecDeque<AggTrade>,
     capacity: usize,
+    total_price: f64,
+    total_volume: f64,
+    buyer_maker_true: usize,
+    buyer_maker_false: usize,
+    price_sum_squares: f64,
 }
 
 impl AggTradeStorage {
@@ -66,13 +71,35 @@ impl AggTradeStorage {
         Self {
             trades: VecDeque::with_capacity(capacity),
             capacity,
+            total_price: 0.0,
+            total_volume: 0.0,
+            buyer_maker_true: 0,
+            buyer_maker_false: 0,
+            price_sum_squares: 0.0,
         }
     }
 
     // Add a trade to the storage
     pub fn add_trade(&mut self, trade: AggTrade) {
         if self.trades.len() == self.capacity {
-            self.trades.pop_front();
+            if let Some(old_trade) = self.trades.pop_front() {
+                self.total_price -= old_trade.price;
+                self.total_volume -= old_trade.quantity;
+                self.price_sum_squares -= old_trade.price * old_trade.price;
+                if old_trade.is_buyer_maker {
+                    self.buyer_maker_true -= 1;
+                } else {
+                    self.buyer_maker_false -= 1;
+                }
+            }
+        }
+        self.total_price += trade.price;
+        self.total_volume += trade.quantity;
+        self.price_sum_squares += trade.price * trade.price;
+        if trade.is_buyer_maker {
+            self.buyer_maker_true += 1;
+        } else {
+            self.buyer_maker_false += 1;
         }
         self.trades.push_back(trade);
     }
@@ -87,13 +114,12 @@ impl AggTradeStorage {
         if self.trades.is_empty() {
             return None;
         }
-        let total_price: f64 = self.trades.iter().map(|trade| trade.price).sum();
-        Some(total_price / self.trades.len() as f64)
+        Some(self.total_price / self.trades.len() as f64)
     }
 
     // Calculate the total volume of trades
     pub fn total_volume(&self) -> f64 {
-        self.trades.iter().map(|trade| trade.quantity).sum()
+        self.total_volume
     }
 
     // Calculate the median price of trades
@@ -117,15 +143,7 @@ impl AggTradeStorage {
             return None;
         }
         let mean = self.calculate_average_price()?;
-        let variance: f64 = self
-            .trades
-            .iter()
-            .map(|trade| {
-                let diff = trade.price - mean;
-                diff * diff
-            })
-            .sum::<f64>()
-            / self.trades.len() as f64;
+        let variance = (self.price_sum_squares / self.trades.len() as f64) - (mean * mean);
         Some(variance.sqrt())
     }
 
@@ -139,8 +157,7 @@ impl AggTradeStorage {
             .iter()
             .map(|trade| trade.price * trade.quantity)
             .sum();
-        let total_volume: f64 = self.total_volume();
-        Some(total_price_volume / total_volume)
+        Some(total_price_volume / self.total_volume)
     }
 
     // Calculate the maximum price of trades
@@ -219,17 +236,6 @@ impl AggTradeStorage {
 
     // Calculate the buyer maker count
     pub fn calculate_buyer_maker_count(&self) -> (usize, usize) {
-        let mut buyer_maker_true = 0;
-        let mut buyer_maker_false = 0;
-
-        for trade in &self.trades {
-            if trade.is_buyer_maker {
-                buyer_maker_true += 1;
-            } else {
-                buyer_maker_false += 1;
-            }
-        }
-
-        (buyer_maker_true, buyer_maker_false)
+        (self.buyer_maker_true, self.buyer_maker_false)
     }
 }

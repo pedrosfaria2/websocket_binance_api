@@ -4,7 +4,7 @@ use crate::websocket::client::run::run;
 use crate::websocket::client::{BINANCE_WS_COMBINED_URL, BINANCE_WS_URL};
 use inquire::{MultiSelect, Select};
 use std::io::{self, Write};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 /// Displays the main menu and processes user selections
 pub async fn show_menu() {
@@ -18,7 +18,7 @@ pub async fn show_menu() {
         "Exit",
     ];
 
-    let storage = Arc::new(Mutex::new(AggTradeStorage::new(1000)));
+    let storage = Arc::new(RwLock::new(AggTradeStorage::new(1000)));
 
     loop {
         clear_screen();
@@ -48,7 +48,7 @@ pub async fn show_menu() {
 }
 
 /// Subscribes to a single stream type (aggTrade, trade)
-async fn subscribe(stream_type: &str, storage: Arc<Mutex<AggTradeStorage>>) {
+async fn subscribe(stream_type: &str, storage: Arc<RwLock<AggTradeStorage>>) {
     if let Ok(symbols) = fetch_symbols().await {
         if let Some(symbol) = select_symbol(symbols).await {
             let url = format!("{}{}@{}", BINANCE_WS_URL, symbol, stream_type);
@@ -60,7 +60,7 @@ async fn subscribe(stream_type: &str, storage: Arc<Mutex<AggTradeStorage>>) {
 }
 
 /// Subscribes to a stream type with interval (kline)
-async fn subscribe_with_interval(stream_type: &str, storage: Arc<Mutex<AggTradeStorage>>) {
+async fn subscribe_with_interval(stream_type: &str, storage: Arc<RwLock<AggTradeStorage>>) {
     if let Ok(symbols) = fetch_symbols().await {
         if let Some(symbol) = select_symbol(symbols).await {
             let intervals = vec![
@@ -83,7 +83,7 @@ async fn subscribe_with_interval(stream_type: &str, storage: Arc<Mutex<AggTradeS
 }
 
 /// Subscribes to multiple custom streams
-async fn custom_subscribe(storage: Arc<Mutex<AggTradeStorage>>) {
+async fn custom_subscribe(storage: Arc<RwLock<AggTradeStorage>>) {
     if let Ok(symbols) = fetch_symbols().await {
         let selected_symbols = MultiSelect::new("Choose symbols:", symbols)
             .prompt()
@@ -124,7 +124,7 @@ async fn custom_subscribe(storage: Arc<Mutex<AggTradeStorage>>) {
 async fn process_subscription(
     url: &str,
     streams: Vec<String>,
-    storage: Arc<Mutex<AggTradeStorage>>,
+    storage: Arc<RwLock<AggTradeStorage>>,
 ) {
     clear_screen();
     println!("Subscribing to streams...");
@@ -170,10 +170,10 @@ async fn list_symbols() {
 }
 
 /// Lists current subscriptions (placeholder)
-fn list_subscriptions(storage: Arc<Mutex<AggTradeStorage>>) {
+fn list_subscriptions(storage: Arc<RwLock<AggTradeStorage>>) {
     clear_screen();
     println!("Listing subscriptions...");
-    let trades = storage.lock().unwrap().get_trades();
+    let trades = storage.read().unwrap().get_trades();
     for trade in trades {
         println!("{:?}", trade);
     }

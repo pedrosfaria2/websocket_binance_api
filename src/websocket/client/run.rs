@@ -5,7 +5,7 @@ use crate::websocket::handler::aggtrade_handler::handle_aggtrade_messages;
 use crate::websocket::ping::start_ping;
 use crate::websocket::shutdown::handle_shutdown;
 use futures_util::StreamExt;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::connect_async;
 
@@ -13,7 +13,7 @@ pub async fn run(
     url: &str,
     streams: Vec<String>,
     base_id: u64,
-    storage: Arc<Mutex<AggTradeStorage>>,
+    storage: Arc<RwLock<AggTradeStorage>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let (shutdown_tx, shutdown_rx) = mpsc::channel(1);
     let (ws_shutdown_tx, ws_shutdown_rx) = oneshot::channel();

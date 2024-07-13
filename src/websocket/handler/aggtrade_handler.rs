@@ -9,7 +9,7 @@ use crossterm::{
 use futures_util::StreamExt;
 use serde_json::Value;
 use std::io::stdout;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::protocol::Message;
 use tui::backend::CrosstermBackend;
@@ -17,7 +17,7 @@ use tui::Terminal;
 
 pub async fn handle_aggtrade_messages<S>(
     mut read: S,
-    storage: Arc<Mutex<AggTradeStorage>>,
+    storage: Arc<RwLock<AggTradeStorage>>,
     mut shutdown_rx: mpsc::Receiver<()>,
 ) where
     S: StreamExt<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
@@ -44,28 +44,32 @@ pub async fn handle_aggtrade_messages<S>(
                     Ok(Message::Text(text)) => {
                         if let Ok(json) = serde_json::from_str::<Value>(&text) {
                             if let Some(agg_trade) = parse_agg_trade(&json) {
-                                let mut storage = storage.lock().unwrap();
-                                storage.add_trade(agg_trade.clone());
+                                {
+                                    let mut storage = storage.write().unwrap();
+                                    storage.add_trade(agg_trade.clone());
+                                }
 
                                 // Calculate statistics
-                                let avg_price = storage.calculate_average_price().unwrap_or(0.0);
-                                let median_price = storage.calculate_median_price().unwrap_or(0.0);
-                                let std_dev = storage.calculate_standard_deviation().unwrap_or(0.0);
-                                let total_volume = storage.total_volume();
-                                let volume_weighted_avg_price = storage.calculate_vwap().unwrap_or(0.0);
-                                let max_price = storage.calculate_max_price().unwrap_or(0.0);
-                                let min_price = storage.calculate_min_price().unwrap_or(0.0);
-                                let ema = storage.calculate_ema(10).unwrap_or(0.0);
-                                let sma = storage.calculate_sma(10).unwrap_or(0.0);
-                                let rsi = storage.calculate_rsi(14).unwrap_or(0.0);
-                                let last_price = agg_trade.price;  // Get the last price
-
-                                // Calculate buyer_maker counts
-                                let (buyer_maker_true, buyer_maker_false) = storage.calculate_buyer_maker_count();
-
-                                // Prepare data for display
-                                let trades: Vec<_> = storage.get_trades().iter().rev().take(20).cloned().collect();
-                                let prices: Vec<(f64, f64)> = storage.get_trades().iter().map(|trade| (trade.timestamp.timestamp_millis() as f64, trade.price)).collect();
+                                let (avg_price, median_price, std_dev, total_volume, volume_weighted_avg_price, max_price, min_price, ema, sma, rsi, buyer_maker_true, buyer_maker_false, last_price, trades, prices) = {
+                                    let storage = storage.read().unwrap();
+                                    (
+                                        storage.calculate_average_price().unwrap_or(0.0),
+                                        storage.calculate_median_price().unwrap_or(0.0),
+                                        storage.calculate_standard_deviation().unwrap_or(0.0),
+                                        storage.total_volume(),
+                                        storage.calculate_vwap().unwrap_or(0.0),
+                                        storage.calculate_max_price().unwrap_or(0.0),
+                                        storage.calculate_min_price().unwrap_or(0.0),
+                                        storage.calculate_ema(10).unwrap_or(0.0),
+                                        storage.calculate_sma(10).unwrap_or(0.0),
+                                        storage.calculate_rsi(14).unwrap_or(0.0),
+                                        storage.calculate_buyer_maker_count().0,
+                                        storage.calculate_buyer_maker_count().1,
+                                        agg_trade.price,
+                                        storage.get_trades().iter().rev().take(20).cloned().collect::<Vec<_>>(),
+                                        storage.get_trades().iter().map(|trade| (trade.timestamp.timestamp_millis() as f64, trade.price)).collect::<Vec<_>>()
+                                    )
+                                };
 
                                 // Create RenderData
                                 let render_data = RenderData {
@@ -82,7 +86,7 @@ pub async fn handle_aggtrade_messages<S>(
                                     rsi,
                                     last_price,
                                     prices,
-                                    buyer_maker_count: (buyer_maker_true, buyer_maker_false), // Added buyer_maker_count
+                                    buyer_maker_count: (buyer_maker_true, buyer_maker_false),
                                 };
 
                                 // Draw UI
