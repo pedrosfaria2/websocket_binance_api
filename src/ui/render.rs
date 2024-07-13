@@ -20,18 +20,24 @@ pub struct RenderData<'a> {
     pub last_price: f64,
     pub prices: &'a [(f64, f64)],
     pub buyer_maker_count: (usize, usize),
+    pub message_count: u64,
+    pub avg_arrival_interval: f64,
+    pub avg_processing_time: f64,
+    pub arrival_intervals: &'a [(f64, f64)],
+    pub processing_times: &'a [(f64, f64)],
 }
 
 pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
-    // Layout with three vertical chunks
+    // Layout with four vertical chunks
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)
         .constraints(
             [
-                Constraint::Percentage(50),
-                Constraint::Percentage(25),
-                Constraint::Percentage(25),
+                Constraint::Percentage(40),
+                Constraint::Percentage(20),
+                Constraint::Percentage(20),
+                Constraint::Percentage(20),
             ]
             .as_ref(),
         )
@@ -98,7 +104,8 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
             [
                 Constraint::Percentage(25),
                 Constraint::Percentage(25),
-                Constraint::Percentage(50),
+                Constraint::Percentage(25),
+                Constraint::Percentage(25),
             ]
             .as_ref(),
         )
@@ -188,6 +195,30 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
     // Render the buyer maker gauge
     f.render_widget(buyer_maker_gauge, stats_chunks[2]);
 
+    // Performance statistics paragraph
+    let performance_stats = Paragraph::new(vec![
+        Spans::from(vec![Span::raw(format!(
+            "Messages Processed: {}",
+            data.message_count
+        ))]),
+        Spans::from(vec![Span::raw(format!(
+            "Avg Arrival Interval: {:.2} ms",
+            data.avg_arrival_interval
+        ))]),
+        Spans::from(vec![Span::raw(format!(
+            "Avg Processing Time: {:.2} ms",
+            data.avg_processing_time
+        ))]),
+    ])
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Performance Stats"),
+    );
+
+    // Render performance statistics
+    f.render_widget(performance_stats, stats_chunks[3]);
+
     // Calculate price bounds
     let price_min = data
         .prices
@@ -201,14 +232,14 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
         .fold(f64::NEG_INFINITY, f64::max);
 
     // Dataset for chart
-    let datasets = vec![Dataset::default()
+    let price_dataset = vec![Dataset::default()
         .name("Prices")
         .marker(tui::symbols::Marker::Block)
         .style(Style::default().fg(Color::Cyan))
-        .data(data.prices)];
+        .data(&data.prices)];
 
     // Chart widget
-    let chart = Chart::new(datasets)
+    let price_chart = Chart::new(price_dataset)
         .block(Block::default().borders(Borders::ALL).title("Price Chart"))
         .x_axis(
             Axis::default()
@@ -246,6 +277,108 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
                 ]),
         );
 
-    // Render chart
-    f.render_widget(chart, chunks[2]);
+    // Render price chart
+    f.render_widget(price_chart, chunks[2]);
+
+    // Dataset for performance chart
+    let performance_dataset = vec![
+        Dataset::default()
+            .name("Arrival Interval")
+            .marker(tui::symbols::Marker::Braille)
+            .style(Style::default().fg(Color::Yellow))
+            .data(&data.arrival_intervals),
+        Dataset::default()
+            .name("Processing Time")
+            .marker(tui::symbols::Marker::Braille)
+            .style(Style::default().fg(Color::Green))
+            .data(&data.processing_times),
+    ];
+
+    // Performance chart widget
+    let performance_chart = Chart::new(performance_dataset)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Performance Chart"),
+        )
+        .x_axis(
+            Axis::default()
+                .title(Span::styled(
+                    "Message Count",
+                    Style::default().fg(Color::Gray),
+                ))
+                .style(Style::default().fg(Color::Gray))
+                .bounds([
+                    data.arrival_intervals
+                        .first()
+                        .map(|&(x, _)| x)
+                        .unwrap_or(0.0),
+                    data.arrival_intervals
+                        .last()
+                        .map(|&(x, _)| x)
+                        .unwrap_or(0.0),
+                ])
+                .labels(vec![
+                    Span::styled(
+                        format!(
+                            "{}",
+                            data.arrival_intervals
+                                .first()
+                                .map(|&(x, _)| x)
+                                .unwrap_or(0.0)
+                        ),
+                        Style::default().add_modifier(tui::style::Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        format!(
+                            "{}",
+                            data.arrival_intervals
+                                .last()
+                                .map(|&(x, _)| x)
+                                .unwrap_or(0.0)
+                        ),
+                        Style::default().add_modifier(tui::style::Modifier::BOLD),
+                    ),
+                ]),
+        )
+        .y_axis(
+            Axis::default()
+                .title(Span::styled("Time (ms)", Style::default().fg(Color::Gray)))
+                .style(Style::default().fg(Color::Gray))
+                .bounds([
+                    data.arrival_intervals
+                        .iter()
+                        .map(|&(_, y)| y)
+                        .fold(f64::INFINITY, f64::min),
+                    data.arrival_intervals
+                        .iter()
+                        .map(|&(_, y)| y)
+                        .fold(f64::NEG_INFINITY, f64::max),
+                ])
+                .labels(vec![
+                    Span::styled(
+                        format!(
+                            "{:.2}",
+                            data.arrival_intervals
+                                .iter()
+                                .map(|&(_, y)| y)
+                                .fold(f64::INFINITY, f64::min)
+                        ),
+                        Style::default().add_modifier(tui::style::Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        format!(
+                            "{:.2}",
+                            data.arrival_intervals
+                                .iter()
+                                .map(|&(_, y)| y)
+                                .fold(f64::NEG_INFINITY, f64::max)
+                        ),
+                        Style::default().add_modifier(tui::style::Modifier::BOLD),
+                    ),
+                ]),
+        );
+
+    // Render performance chart
+    f.render_widget(performance_chart, chunks[3]);
 }
