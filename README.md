@@ -1,6 +1,6 @@
 # Binance WebSocket Client
 
-This project is a WebSocket client for interacting with the Binance API. It allows subscribing to various streams such as `aggTrade`, `trade`, and `kline`.
+This project is a comprehensive WebSocket client designed to interact with the Binance API. It allows users to subscribe to various data streams such as `aggTrade`, `trade`, and `kline`. The client processes real-time data, provides a graphical user interface (GUI) to display the data, and includes features for custom stream subscriptions and graceful shutdown handling.
 
 ## Table of Contents
 
@@ -8,14 +8,19 @@ This project is a WebSocket client for interacting with the Binance API. It allo
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Usage](#usage)
+   - [Menu Options](#menu-options)
+- [Project Structure](#project-structure)
+- [Running Tests](#running-tests)
 - [License](#license)
 
 ## Features
 
-- Subscribe to `aggTrade`, `trade`, and `kline` streams.
-- Custom stream subscriptions.
-- Real-time data processing.
-- Graceful shutdown handling.
+- **Real-time Data Processing**: Subscribe to and process real-time data streams from Binance.
+- **Graphical User Interface**: Utilizes `tui-rs` to display trade data and statistics in a user-friendly interface.
+- **Custom Stream Subscriptions**: Allows subscribing to multiple custom streams for flexibility.
+- **Graceful Shutdown Handling**: Captures shutdown signals to exit the application cleanly.
+- **Comprehensive Statistics**: Calculates and displays average price, median price, standard deviation, total volume, and volume-weighted average price (VWAP).
+- **Modular Design**: Organized into several modules to enhance modularity and maintainability.
 
 ## Requirements
 
@@ -56,8 +61,22 @@ This project is a WebSocket client for interacting with the Binance API. It allo
 - **Subscribe to kline**: Subscribe to kline (candlestick) data for a specific symbol and interval.
 - **Custom Subscribe**: Subscribe to multiple custom streams.
 - **List Symbols**: List all available symbols.
-- **List Subscriptions**: List current subscriptions (placeholder).
+- **List Subscriptions**: List current subscriptions.
 - **Exit**: Exit the application.
+
+## Project Structure
+
+The project is organized into several modules to enhance modularity and maintainability:
+
+- **client**: Contains the main WebSocket client logic, including running the client, handling subscriptions, and managing shutdown.
+- **handler**: Includes handlers for different types of messages (e.g., aggTrade) and input handling for graceful shutdown.
+- **input**: Manages user input for shutdown signals.
+- **message**: Parses incoming WebSocket messages.
+- **ping**: Manages periodic pings to keep the WebSocket connection alive.
+- **shutdown**: Handles graceful shutdown on receiving a shutdown signal.
+- **storage**: Manages storage and processing of trade data.
+- **subscriptions**: Manages subscription messages to the Binance WebSocket API.
+- **ui**: Renders the user interface using `tui-rs`.
 
 ## Running Tests
 
