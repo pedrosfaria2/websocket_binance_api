@@ -142,4 +142,73 @@ impl AggTradeStorage {
         let total_volume: f64 = self.total_volume();
         Some(total_price_volume / total_volume)
     }
+
+    // Calculate the maximum price of trades
+    pub fn calculate_max_price(&self) -> Option<f64> {
+        self.trades.iter().map(|trade| trade.price).max_by(|a, b| a.partial_cmp(b).unwrap())
+    }
+
+    // Calculate the minimum price of trades
+    pub fn calculate_min_price(&self) -> Option<f64> {
+        self.trades.iter().map(|trade| trade.price).min_by(|a, b| a.partial_cmp(b).unwrap())
+    }
+
+    // Calculate the Exponential Moving Average (EMA)
+    pub fn calculate_ema(&self, period: usize) -> Option<f64> {
+        if self.trades.len() < period {
+            return None;
+        }
+        let k = 2.0 / (period + 1) as f64;
+        let mut ema = self.trades.iter().take(period).map(|trade| trade.price).sum::<f64>() / period as f64;
+        for trade in self.trades.iter().skip(period) {
+            ema = trade.price * k + ema * (1.0 - k);
+        }
+        Some(ema)
+    }
+
+    // Calculate the Simple Moving Average (SMA)
+    pub fn calculate_sma(&self, period: usize) -> Option<f64> {
+        if self.trades.len() < period {
+            return None;
+        }
+        Some(self.trades.iter().rev().take(period).map(|trade| trade.price).sum::<f64>() / period as f64)
+    }
+
+    // Calculate the Relative Strength Index (RSI)
+    pub fn calculate_rsi(&self, period: usize) -> Option<f64> {
+        if self.trades.len() < period + 1 {
+            return None;
+        }
+        let mut gains = 0.0;
+        let mut losses = 0.0;
+        for i in 1..=period {
+            let change = self.trades[self.trades.len() - i].price - self.trades[self.trades.len() - i - 1].price;
+            if change > 0.0 {
+                gains += change;
+            } else {
+                losses -= change;
+            }
+        }
+        if losses == 0.0 {
+            return Some(100.0);
+        }
+        let rs = gains / losses;
+        Some(100.0 - (100.0 / (1.0 + rs)))
+    }
+
+    // Calculate the buyer maker count
+    pub fn calculate_buyer_maker_count(&self) -> (usize, usize) {
+        let mut buyer_maker_true = 0;
+        let mut buyer_maker_false = 0;
+
+        for trade in &self.trades {
+            if trade.is_buyer_maker {
+                buyer_maker_true += 1;
+            } else {
+                buyer_maker_false += 1;
+            }
+        }
+
+        (buyer_maker_true, buyer_maker_false)
+    }
 }

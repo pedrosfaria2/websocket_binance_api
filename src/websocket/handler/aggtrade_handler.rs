@@ -53,6 +53,15 @@ pub async fn handle_aggtrade_messages<S>(
                                 let std_dev = storage.calculate_standard_deviation().unwrap_or(0.0);
                                 let total_volume = storage.total_volume();
                                 let volume_weighted_avg_price = storage.calculate_vwap().unwrap_or(0.0);
+                                let max_price = storage.calculate_max_price().unwrap_or(0.0);
+                                let min_price = storage.calculate_min_price().unwrap_or(0.0);
+                                let ema = storage.calculate_ema(10).unwrap_or(0.0);
+                                let sma = storage.calculate_sma(10).unwrap_or(0.0);
+                                let rsi = storage.calculate_rsi(14).unwrap_or(0.0);
+                                let last_price = agg_trade.price;  // Get the last price
+
+                                // Calculate buyer_maker counts
+                                let (buyer_maker_true, buyer_maker_false) = storage.calculate_buyer_maker_count();
 
                                 // Prepare data for display
                                 let trades: Vec<_> = storage.get_trades().iter().rev().take(20).cloned().collect();
@@ -66,7 +75,14 @@ pub async fn handle_aggtrade_messages<S>(
                                     std_dev,
                                     total_volume,
                                     volume_weighted_avg_price,
+                                    max_price,
+                                    min_price,
+                                    ema,
+                                    sma,
+                                    rsi,
+                                    last_price,
                                     prices,
+                                    buyer_maker_count: (buyer_maker_true, buyer_maker_false), // Added buyer_maker_count
                                 };
 
                                 // Draw UI
