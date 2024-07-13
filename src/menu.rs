@@ -1,9 +1,10 @@
 use crate::subscription::fetch_symbols;
-use crate::websocket::client::{run, BINANCE_WS_COMBINED_URL, BINANCE_WS_URL};
 use inquire::{MultiSelect, Select};
 use std::io::{self, Write};
 use std::sync::{Arc, Mutex};
 use crate::storage::aggtrade_storage::AggTradeStorage;
+use crate::websocket::client::{BINANCE_WS_COMBINED_URL, BINANCE_WS_URL};
+use crate::websocket::client::run::run;
 
 /// Displays the main menu and processes user selections
 pub async fn show_menu() {

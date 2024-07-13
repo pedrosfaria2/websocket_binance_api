@@ -1,5 +1,4 @@
 use crate::websocket::message::parse_agg_trade;
-use crate::websocket::input::handle_input;
 use crate::storage::aggtrade_storage::{AggTradeStorage};
 use std::sync::{Arc, Mutex};
 use futures_util::StreamExt;
@@ -10,6 +9,7 @@ use serde_json::Value;
 use tui::backend::CrosstermBackend;
 use tui::Terminal;
 use crate::ui::render::{render_ui, RenderData};
+use crate::websocket::{input};
 
 pub async fn handle_messages<S>(
     mut read: S,
@@ -38,7 +38,7 @@ pub async fn handle_messages<S>(
     });
 
     // Create a separate thread to handle user input
-    let input_handle = handle_input(shutdown_tx);
+    let input_handle = input::handle_input(shutdown_tx);
 
     'main_loop: loop {
         tokio::select! {
