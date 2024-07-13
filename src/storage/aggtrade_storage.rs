@@ -63,6 +63,8 @@ pub struct AggTradeStorage {
     buyer_maker_true: usize,
     buyer_maker_false: usize,
     price_sum_squares: f64,
+    max_price: f64,
+    min_price: f64,
 }
 
 impl AggTradeStorage {
@@ -76,6 +78,8 @@ impl AggTradeStorage {
             buyer_maker_true: 0,
             buyer_maker_false: 0,
             price_sum_squares: 0.0,
+            max_price: f64::MIN,
+            min_price: f64::MAX,
         }
     }
 
@@ -91,11 +95,21 @@ impl AggTradeStorage {
                 } else {
                     self.buyer_maker_false -= 1;
                 }
+
+                if old_trade.price == self.max_price {
+                    self.max_price = self.trades.iter().map(|t| t.price).fold(f64::MIN, f64::max);
+                }
+                if old_trade.price == self.min_price {
+                    self.min_price = self.trades.iter().map(|t| t.price).fold(f64::MAX, f64::min);
+                }
             }
         }
+
         self.total_price += trade.price;
         self.total_volume += trade.quantity;
         self.price_sum_squares += trade.price * trade.price;
+        self.max_price = self.max_price.max(trade.price);
+        self.min_price = self.min_price.min(trade.price);
         if trade.is_buyer_maker {
             self.buyer_maker_true += 1;
         } else {
@@ -162,18 +176,18 @@ impl AggTradeStorage {
 
     // Calculate the maximum price of trades
     pub fn calculate_max_price(&self) -> Option<f64> {
-        self.trades
-            .iter()
-            .map(|trade| trade.price)
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
+        if self.trades.is_empty() {
+            return None;
+        }
+        Some(self.max_price)
     }
 
     // Calculate the minimum price of trades
     pub fn calculate_min_price(&self) -> Option<f64> {
-        self.trades
-            .iter()
-            .map(|trade| trade.price)
-            .min_by(|a, b| a.partial_cmp(b).unwrap())
+        if self.trades.is_empty() {
+            return None;
+        }
+        Some(self.min_price)
     }
 
     // Calculate the Exponential Moving Average (EMA)
