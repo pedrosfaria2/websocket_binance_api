@@ -1,4 +1,4 @@
-use crate::websocket::message::handle_messages;
+use crate::websocket::handler::handle_messages;
 use crate::websocket::ping::start_ping;
 use crate::websocket::shutdown::handle_shutdown;
 use crate::websocket::subscriptions::{subscribe_message, unsubscribe_message};
