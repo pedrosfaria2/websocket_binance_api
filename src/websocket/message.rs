@@ -3,16 +3,12 @@ use serde_json::Value;
 use tokio_tungstenite::tungstenite::protocol::Message;
 use crate::storage::aggtrade_storage::{AggTrade, AggTradeStorage};
 use std::sync::{Arc, Mutex};
-use std::io::{self, stdout};
-use crossterm::execute;
-use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen, enable_raw_mode, disable_raw_mode};
+use std::io::stdout;
+use crossterm::{execute, terminal::{EnterAlternateScreen, LeaveAlternateScreen, enable_raw_mode, disable_raw_mode}, event::{self, Event as CEvent, KeyCode}};
 use tui::backend::CrosstermBackend;
 use tui::Terminal;
-use tui::widgets::{Block, Borders, Table, Row, Cell, Paragraph, Chart, Dataset, Axis};
-use tui::layout::{Layout, Constraint, Direction};
-use tui::style::{Style, Color};
-use tui::text::{Span, Spans};
-use chrono::{DateTime, Utc, NaiveDateTime};
+use chrono::{Utc, TimeZone};
+use crate::ui::render::{render_ui, RenderData};
 
 pub async fn handle_messages<S>(
     mut read: S,
@@ -28,147 +24,89 @@ pub async fn handle_messages<S>(
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.clear().unwrap();
 
-    loop {
-        while let Some(message) = read.next().await {
-            match message {
-                Ok(Message::Text(text)) => {
-                    if let Ok(json) = serde_json::from_str::<Value>(&text) {
-                        if let Some(agg_trade) = parse_agg_trade(&json) {
-                            let mut storage = storage.lock().unwrap();
-                            storage.add_trade(agg_trade.clone());
+    // Create a channel to receive the shutdown signal
+    let (shutdown_tx, mut shutdown_rx) = tokio::sync::mpsc::channel(1);
 
-                            // Calculate statistics
-                            let avg_price = storage.calculate_average_price().unwrap_or(0.0);
-                            let median_price = storage.calculate_median_price().unwrap_or(0.0);
-                            let std_dev = storage.calculate_standard_deviation().unwrap_or(0.0);
-                            let total_volume = storage.total_volume();
-                            let volume_weighted_avg_price = storage.calculate_vwap().unwrap_or(0.0);
+    // Clone the shutdown_tx for use in the ctrl_c handler
+    let shutdown_tx_clone = shutdown_tx.clone();
 
-                            // Prepare data for display
-                            let trades: Vec<_> = storage.get_trades().iter().rev().take(20).collect::<Vec<_>>().iter().rev().map(|trade| {
-                                Row::new(vec![
-                                    Cell::from(trade.symbol.clone()),
-                                    Cell::from(trade.trade_id.to_string()),
-                                    Cell::from(format!("{:.2}", trade.price)),
-                                    Cell::from(format!("{:.4}", trade.quantity)),
-                                    Cell::from(trade.first_trade_id.to_string()),
-                                    Cell::from(trade.last_trade_id.to_string()),
-                                    Cell::from(trade.timestamp.format("%Y-%m-%d %H:%M:%S").to_string()),
-                                    Cell::from(trade.is_buyer_maker.to_string()),
-                                ])
-                            }).collect();
+    // Spawn a task to listen for Ctrl+C and send the shutdown signal
+    tokio::spawn(async move {
+        tokio::signal::ctrl_c().await.expect("failed to listen for event");
+        shutdown_tx_clone.send(()).await.expect("failed to send shutdown signal");
+    });
 
-                            // Prepare data for the chart
-                            let prices: Vec<(f64, f64)> = storage.get_trades().iter().map(|trade| (trade.timestamp.timestamp() as f64, trade.price)).collect();
-
-                            // Draw UI
-                            terminal.draw(|f| {
-                                let chunks = Layout::default()
-                                    .direction(Direction::Vertical)
-                                    .margin(1)
-                                    .constraints(
-                                        [
-                                            Constraint::Percentage(50),
-                                            Constraint::Percentage(25),
-                                            Constraint::Percentage(25),
-                                        ]
-                                            .as_ref(),
-                                    )
-                                    .split(f.size());
-
-                                let header = Row::new(vec![
-                                    Cell::from("Symbol"),
-                                    Cell::from("Trade ID"),
-                                    Cell::from("Price"),
-                                    Cell::from("Quantity"),
-                                    Cell::from("First Trade ID"),
-                                    Cell::from("Last Trade ID"),
-                                    Cell::from("Timestamp"),
-                                    Cell::from("Buyer Maker"),
-                                ]).style(Style::default().fg(Color::Yellow).bg(Color::Blue));
-
-                                let table = Table::new(trades)
-                                    .header(header)
-                                    .block(Block::default().borders(Borders::ALL).title("Trades"))
-                                    .widths(&[
-                                        Constraint::Length(10),
-                                        Constraint::Length(15),
-                                        Constraint::Length(10),
-                                        Constraint::Length(10),
-                                        Constraint::Length(15),
-                                        Constraint::Length(15),
-                                        Constraint::Length(20),
-                                        Constraint::Length(15),
-                                    ]);
-
-                                f.render_widget(table, chunks[0]);
-
-                                let stats = Paragraph::new(vec![
-                                    Spans::from(vec![Span::raw(format!("Average Price: {:.2}", avg_price))]),
-                                    Spans::from(vec![Span::raw(format!("Median Price: {:.2}", median_price))]),
-                                    Spans::from(vec![Span::raw(format!("Standard Deviation: {:.2}", std_dev))]),
-                                    Spans::from(vec![Span::raw(format!("Total Volume: {:.4}", total_volume))]),
-                                    Spans::from(vec![Span::raw(format!("VWAP: {:.2}", volume_weighted_avg_price))]),
-                                ])
-                                    .block(Block::default().borders(Borders::ALL).title("Statistics"));
-
-                                f.render_widget(stats, chunks[1]);
-
-                                let price_min = prices.iter().map(|&(_, y)| y).fold(f64::INFINITY, f64::min);
-                                let price_max = prices.iter().map(|&(_, y)| y).fold(f64::NEG_INFINITY, f64::max);
-
-                                let datasets = vec![
-                                    Dataset::default()
-                                        .name("Prices")
-                                        .marker(tui::symbols::Marker::Dot)
-                                        .style(Style::default().fg(Color::Cyan))
-                                        .data(&prices),
-                                ];
-
-                                let x_labels = if !prices.is_empty() {
-                                    let first = prices.first().unwrap().0;
-                                    let last = prices.last().unwrap().0;
-                                    vec![
-                                        Span::styled(NaiveDateTime::from_timestamp(first as i64, 0).format("%Y-%m-%d %H:%M:%S").to_string(), Style::default().add_modifier(tui::style::Modifier::BOLD)),
-                                        Span::styled(NaiveDateTime::from_timestamp(last as i64, 0).format("%Y-%m-%d %H:%M:%S").to_string(), Style::default().add_modifier(tui::style::Modifier::BOLD)),
-                                    ]
-                                } else {
-                                    vec![]
-                                };
-
-                                let chart = Chart::new(datasets)
-                                    .block(Block::default().borders(Borders::ALL).title("Price Chart"))
-                                    .x_axis(
-                                        Axis::default()
-                                            .title(Span::styled("Timestamp", Style::default().fg(Color::Gray)))
-                                            .style(Style::default().fg(Color::Gray))
-                                            .bounds([prices.first().map(|&(x, _)| x).unwrap_or(0.0), prices.last().map(|&(x, _)| x).unwrap_or(0.0)])
-                                            .labels(x_labels)
-                                    )
-                                    .y_axis(
-                                        Axis::default()
-                                            .title(Span::styled("Price", Style::default().fg(Color::Gray)))
-                                            .style(Style::default().fg(Color::Gray))
-                                            .bounds([price_min, price_max])
-                                            .labels(vec![
-                                                Span::styled(format!("{:.2}", price_min), Style::default().add_modifier(tui::style::Modifier::BOLD)),
-                                                Span::styled(format!("{:.2}", price_max), Style::default().add_modifier(tui::style::Modifier::BOLD)),
-                                            ]),
-                                    );
-
-                                f.render_widget(chart, chunks[2]);
-                            }).unwrap();
-                        }
+    // Create a separate thread to handle user input
+    let input_handle = tokio::spawn(async move {
+        loop {
+            if event::poll(std::time::Duration::from_millis(10)).unwrap() {
+                if let CEvent::Key(key) = event::read().unwrap() {
+                    if key.code == KeyCode::Char('q') {
+                        shutdown_tx.send(()).await.expect("failed to send shutdown signal");
+                        break;
                     }
                 }
-                Ok(Message::Close(_)) => {
-                    println!("WebSocket connection closed.");
-                    break;
-                }
-                _ => {}
             }
         }
+    });
+
+    'main_loop: loop {
+        tokio::select! {
+            Some(message) = read.next() => {
+                match message {
+                    Ok(Message::Text(text)) => {
+                        if let Ok(json) = serde_json::from_str::<Value>(&text) {
+                            if let Some(agg_trade) = parse_agg_trade(&json) {
+                                let mut storage = storage.lock().unwrap();
+                                storage.add_trade(agg_trade.clone());
+
+                                // Calculate statistics
+                                let avg_price = storage.calculate_average_price().unwrap_or(0.0);
+                                let median_price = storage.calculate_median_price().unwrap_or(0.0);
+                                let std_dev = storage.calculate_standard_deviation().unwrap_or(0.0);
+                                let total_volume = storage.total_volume();
+                                let volume_weighted_avg_price = storage.calculate_vwap().unwrap_or(0.0);
+
+                                // Prepare data for display
+                                let trades: Vec<AggTrade> = storage.get_trades().iter().rev().take(20).cloned().collect();
+
+                                // Prepare data for the chart
+                                let prices: Vec<(f64, f64)> = storage.get_trades().iter().map(|trade| (trade.timestamp.timestamp_millis() as f64, trade.price)).collect();
+
+                                // Create RenderData
+                                let render_data = RenderData {
+                                    trades,
+                                    avg_price,
+                                    median_price,
+                                    std_dev,
+                                    total_volume,
+                                    volume_weighted_avg_price,
+                                    prices,
+                                };
+
+                                // Draw UI
+                                terminal.draw(|f| {
+                                    render_ui(f, render_data);
+                                }).unwrap();
+                            }
+                        }
+                    }
+                    Ok(Message::Close(_)) => {
+                        println!("WebSocket connection closed.");
+                        break 'main_loop;
+                    }
+                    _ => {}
+                }
+            },
+            _ = shutdown_rx.recv() => {
+                println!("Received shutdown signal.");
+                break 'main_loop;
+            },
+        }
     }
+
+    // Wait for the input handling thread to finish
+    input_handle.await.unwrap();
 
     // Restore terminal
     disable_raw_mode().unwrap();
@@ -178,8 +116,7 @@ pub async fn handle_messages<S>(
 
 fn parse_agg_trade(data: &Value) -> Option<AggTrade> {
     let timestamp = data.get("T")?.as_u64()?;
-    let naive = NaiveDateTime::from_timestamp((timestamp / 1000) as i64, ((timestamp % 1000) * 1_000_000) as u32);
-    let datetime = DateTime::<Utc>::from_utc(naive, Utc);
+    let datetime = Utc.timestamp_millis_opt(timestamp as i64).single()?;
 
     Some(AggTrade {
         symbol: data.get("s")?.as_str()?.to_string(),

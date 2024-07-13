@@ -1,9 +1,12 @@
-mod menu;
-mod subscription;
 mod websocket;
 mod storage;
+mod menu;
+mod ui;
+mod subscription;
+
+use menu::show_menu;
 
 #[tokio::main]
 async fn main() {
-    menu::show_menu().await;
+    show_menu().await;
 }

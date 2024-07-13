@@ -1,8 +1,8 @@
 use std::collections::VecDeque;
 use serde::{Deserialize, Deserializer};
-use chrono::{DateTime, Utc, NaiveDateTime, TimeZone};
+use chrono::{DateTime, Utc, TimeZone};
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct AggTrade {
     pub symbol: String,
     pub trade_id: u64,
@@ -10,23 +10,29 @@ pub struct AggTrade {
     pub quantity: f64,
     pub first_trade_id: u64,
     pub last_trade_id: u64,
-    #[serde(deserialize_with = "deserialize_timestamp")]
     pub timestamp: DateTime<Utc>,
     pub is_buyer_maker: bool,
 }
 
-fn deserialize_timestamp<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let timestamp = u64::deserialize(deserializer)?;
-    let naive = NaiveDateTime::from_timestamp((timestamp / 1000) as i64, ((timestamp % 1000) * 1_000_000) as u32);
-    Ok(DateTime::<Utc>::from_utc(naive, Utc))
-}
+impl<'de> Deserialize<'de> for AggTrade {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let v = serde_json::Value::deserialize(deserializer)?;
+        let timestamp = v.get("T").and_then(|t| t.as_i64()).ok_or_else(|| serde::de::Error::custom("Missing timestamp"))?;
+        let datetime = Utc.timestamp_millis_opt(timestamp).single().ok_or_else(|| serde::de::Error::custom("Invalid timestamp"))?;
 
-impl AggTrade {
-    pub fn from_json(json: &serde_json::Value) -> Option<Self> {
-        serde_json::from_value(json.clone()).ok()
+        Ok(AggTrade {
+            symbol: v.get("s").and_then(|s| s.as_str()).unwrap_or_default().to_string(),
+            trade_id: v.get("a").and_then(|a| a.as_u64()).unwrap_or_default(),
+            price: v.get("p").and_then(|p| p.as_str()).and_then(|p| p.parse().ok()).unwrap_or_default(),
+            quantity: v.get("q").and_then(|q| q.as_str()).and_then(|q| q.parse().ok()).unwrap_or_default(),
+            first_trade_id: v.get("f").and_then(|f| f.as_u64()).unwrap_or_default(),
+            last_trade_id: v.get("l").and_then(|l| l.as_u64()).unwrap_or_default(),
+            timestamp: datetime,
+            is_buyer_maker: v.get("m").and_then(|m| m.as_bool()).unwrap_or_default(),
+        })
     }
 }
 
