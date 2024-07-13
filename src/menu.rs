@@ -2,6 +2,8 @@ use crate::subscription::fetch_symbols;
 use crate::websocket::client::{run, BINANCE_WS_COMBINED_URL, BINANCE_WS_URL};
 use inquire::{MultiSelect, Select};
 use std::io::{self, Write};
+use std::sync::{Arc, Mutex};
+use crate::storage::aggtrade_storage::AggTradeStorage;
 
 /// Displays the main menu and processes user selections
 pub async fn show_menu() {
@@ -15,6 +17,8 @@ pub async fn show_menu() {
         "Exit",
     ];
 
+    let storage = Arc::new(Mutex::new(AggTradeStorage::new(1000)));
+
     loop {
         clear_screen();
         println!("==============================");
@@ -25,12 +29,12 @@ pub async fn show_menu() {
 
         match choice {
             Ok(option) => match option {
-                "Subscribe to aggTrade" => subscribe("aggTrade").await,
-                "Subscribe to trade" => subscribe("trade").await,
-                "Subscribe to kline" => subscribe_with_interval("kline").await,
-                "Custom Subscribe" => custom_subscribe().await,
+                "Subscribe to aggTrade" => subscribe("aggTrade", storage.clone()).await,
+                "Subscribe to trade" => subscribe("trade", storage.clone()).await,
+                "Subscribe to kline" => subscribe_with_interval("kline", storage.clone()).await,
+                "Custom Subscribe" => custom_subscribe(storage.clone()).await,
                 "List Symbols" => list_symbols().await,
-                "List Subscriptions" => list_subscriptions(),
+                "List Subscriptions" => list_subscriptions(storage.clone()),
                 "Exit" => break,
                 _ => unreachable!(),
             },
@@ -43,11 +47,11 @@ pub async fn show_menu() {
 }
 
 /// Subscribes to a single stream type (aggTrade, trade)
-async fn subscribe(stream_type: &str) {
+async fn subscribe(stream_type: &str, storage: Arc<Mutex<AggTradeStorage>>) {
     if let Ok(symbols) = fetch_symbols().await {
         if let Some(symbol) = select_symbol(symbols).await {
             let url = format!("{}{}@{}", BINANCE_WS_URL, symbol, stream_type);
-            process_subscription(&url, vec![format!("{}@{}", symbol, stream_type)]).await;
+            process_subscription(&url, vec![format!("{}@{}", symbol, stream_type)], storage).await;
         }
     } else {
         eprintln!("Failed to fetch symbols.");
@@ -55,7 +59,7 @@ async fn subscribe(stream_type: &str) {
 }
 
 /// Subscribes to a stream type with interval (kline)
-async fn subscribe_with_interval(stream_type: &str) {
+async fn subscribe_with_interval(stream_type: &str, storage: Arc<Mutex<AggTradeStorage>>) {
     if let Ok(symbols) = fetch_symbols().await {
         if let Some(symbol) = select_symbol(symbols).await {
             let intervals = vec![
@@ -67,8 +71,9 @@ async fn subscribe_with_interval(stream_type: &str) {
                 process_subscription(
                     &url,
                     vec![format!("{}@{}_{}", symbol, stream_type, interval)],
+                    storage,
                 )
-                .await;
+                    .await;
             }
         }
     } else {
@@ -77,7 +82,7 @@ async fn subscribe_with_interval(stream_type: &str) {
 }
 
 /// Subscribes to multiple custom streams
-async fn custom_subscribe() {
+async fn custom_subscribe(storage: Arc<Mutex<AggTradeStorage>>) {
     if let Ok(symbols) = fetch_symbols().await {
         let selected_symbols = MultiSelect::new("Choose symbols:", symbols)
             .prompt()
@@ -108,20 +113,24 @@ async fn custom_subscribe() {
 
         let combined_streams = streams.join("/");
         let url = format!("{}{}", BINANCE_WS_COMBINED_URL, combined_streams);
-        process_subscription(&url, streams).await;
+        process_subscription(&url, streams, storage).await;
     } else {
         eprintln!("Failed to fetch symbols.");
     }
 }
 
 /// Processes the WebSocket subscription
-async fn process_subscription(url: &str, streams: Vec<String>) {
+async fn process_subscription(
+    url: &str,
+    streams: Vec<String>,
+    storage: Arc<Mutex<AggTradeStorage>>,
+) {
     clear_screen();
     println!("Subscribing to streams...");
     println!("Streams: {:?}", streams);
     println!("Combined URL: {}", url);
 
-    if let Err(e) = run(url, streams, 1).await {
+    if let Err(e) = run(url, streams, 1, storage).await {
         eprintln!("Error: {}", e);
     }
 }
@@ -160,9 +169,13 @@ async fn list_symbols() {
 }
 
 /// Lists current subscriptions (placeholder)
-fn list_subscriptions() {
+fn list_subscriptions(storage: Arc<Mutex<AggTradeStorage>>) {
     clear_screen();
     println!("Listing subscriptions...");
+    let trades = storage.lock().unwrap().get_trades();
+    for trade in trades {
+        println!("{:?}", trade);
+    }
     pause();
 }
 
