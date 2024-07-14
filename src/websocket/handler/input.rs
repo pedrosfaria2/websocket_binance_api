@@ -1,7 +1,7 @@
 use crossterm::event::{self, Event as CEvent, KeyCode};
 use tokio::sync::mpsc;
 
-pub async fn handle_input(shutdown_tx: mpsc::Sender<()>) {
+pub async fn handle_input(shutdown_tx: &mpsc::Sender<()>) {
     loop {
         // Poll for events every 10 milliseconds
         if event::poll(std::time::Duration::from_millis(10)).unwrap() {

@@ -1,9 +1,8 @@
 use crate::storage::aggtrade_storage::AggTrade;
-use tui::backend::Backend;
-use tui::layout::{Constraint, Direction, Layout};
-use tui::style::{Color, Style};
-use tui::text::{Span, Spans};
-use tui::widgets::{Axis, Block, Borders, Cell, Chart, Dataset, Gauge, Paragraph, Row, Table};
+use ratatui::layout::{Constraint, Direction, Layout};
+use ratatui::style::{Color, Style};
+use ratatui::text::{Line, Span};
+use ratatui::widgets::{Axis, Block, Borders, Cell, Chart, Dataset, Gauge, Paragraph, Row, Table};
 
 pub struct RenderData<'a> {
     pub trades: &'a [AggTrade],
@@ -27,7 +26,13 @@ pub struct RenderData<'a> {
     pub processing_times: &'a [(f64, f64)],
 }
 
-pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
+macro_rules! create_span {
+    ($($arg:tt)*) => {
+        Span::raw(format!($($arg)*))
+    };
+}
+
+pub fn render_ui(f: &mut ratatui::Frame<>, data: &RenderData) {
     // Layout with four vertical chunks
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -78,20 +83,20 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
         })
         .collect();
 
+    const WIDTHS: [Constraint; 8] = [
+        Constraint::Length(10),
+        Constraint::Length(15),
+        Constraint::Length(10),
+        Constraint::Length(10),
+        Constraint::Length(15),
+        Constraint::Length(15),
+        Constraint::Length(24),
+        Constraint::Length(15),
+    ];
     // Table widget
-    let table = Table::new(trades)
+    let table = Table::new(trades, WIDTHS)
         .header(header)
-        .block(Block::default().borders(Borders::ALL).title("Trades"))
-        .widths(&[
-            Constraint::Length(10),
-            Constraint::Length(15),
-            Constraint::Length(10),
-            Constraint::Length(10),
-            Constraint::Length(15),
-            Constraint::Length(15),
-            Constraint::Length(24),
-            Constraint::Length(15),
-        ]);
+        .block(Block::default().borders(Borders::ALL).title("Trades"));
 
     // Render table
     f.render_widget(table, chunks[0]);
@@ -112,45 +117,27 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
         .split(chunks[1]);
 
     // Statistics paragraph column 1
-    let stats_column_1 = Paragraph::new(vec![
-        Spans::from(vec![Span::raw(format!(
-            "Last Price: {:.2}",
-            data.last_price
-        ))]),
-        Spans::from(vec![Span::raw(format!(
-            "Average Price: {:.2}",
-            data.avg_price
-        ))]),
-        Spans::from(vec![Span::raw(format!(
-            "Median Price: {:.2}",
-            data.median_price
-        ))]),
-        Spans::from(vec![Span::raw(format!("Max Price: {:.2}", data.max_price))]),
-        Spans::from(vec![Span::raw(format!("Min Price: {:.2}", data.min_price))]),
-        Spans::from(vec![Span::raw(format!("EMA: {:.2}", data.ema))]),
-        Spans::from(vec![Span::raw(format!("SMA: {:.2}", data.sma))]),
-    ])
+    let stats_column_1 = Paragraph::new(Line::from(vec![
+        create_span!("Last Price: {:.2}", data.last_price),
+        create_span!("Average Price: {:.2}", data.avg_price),
+        create_span!("Median Price: {:.2}", data.median_price),
+        create_span!("Max Price: {:.2}", data.max_price),
+        create_span!("Min Price: {:.2}", data.min_price),
+        create_span!("EMA: {:.2}", data.ema),
+        create_span!("SMA: {:.2}", data.sma),
+    ]))
     .block(Block::default().borders(Borders::ALL).title("Statistics"));
 
     // Render statistics column 1
     f.render_widget(stats_column_1, stats_chunks[0]);
 
     // Statistics paragraph column 2
-    let stats_column_2 = Paragraph::new(vec![
-        Spans::from(vec![Span::raw(format!(
-            "VWAP: {:.2}",
-            data.volume_weighted_avg_price
-        ))]),
-        Spans::from(vec![Span::raw(format!(
-            "Total Volume: {:.4}",
-            data.total_volume
-        ))]),
-        Spans::from(vec![Span::raw(format!(
-            "Standard Deviation: {:.2}",
-            data.std_dev
-        ))]),
-        Spans::from(vec![Span::raw(format!("RSI: {:.2}", data.rsi))]),
-    ])
+    let stats_column_2 = Paragraph::new(Line::from(vec![
+        create_span!("VWAP: {:.2}", data.volume_weighted_avg_price),
+        create_span!("Total Volume: {:.4}", data.total_volume),
+        create_span!("Standard Deviation: {:.2}", data.std_dev),
+        create_span!("RSI: {:.2}", data.rsi),
+    ]))
     .block(
         Block::default()
             .borders(Borders::ALL)
@@ -181,7 +168,7 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
             Style::default()
                 .fg(Color::Magenta)
                 .bg(Color::Black)
-                .add_modifier(tui::style::Modifier::ITALIC),
+                .add_modifier(ratatui::style::Modifier::ITALIC),
         )
         .percent(buyer_maker_true_percent as u16)
         .label(Span::styled(
@@ -189,27 +176,18 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
                 "Buy: {:.1}%, Sell: {:.1}%",
                 buyer_maker_true_percent, buyer_maker_false_percent
             ),
-            Style::default().add_modifier(tui::style::Modifier::BOLD),
+            Style::default().add_modifier(ratatui::style::Modifier::BOLD),
         ));
 
     // Render the buyer maker gauge
     f.render_widget(buyer_maker_gauge, stats_chunks[2]);
 
     // Performance statistics paragraph
-    let performance_stats = Paragraph::new(vec![
-        Spans::from(vec![Span::raw(format!(
-            "Messages Processed: {}",
-            data.message_count
-        ))]),
-        Spans::from(vec![Span::raw(format!(
-            "Avg Arrival Interval: {:.2} ms",
-            data.avg_arrival_interval
-        ))]),
-        Spans::from(vec![Span::raw(format!(
-            "Avg Processing Time: {:.2} ms",
-            data.avg_processing_time
-        ))]),
-    ])
+    let performance_stats = Paragraph::new(Line::from(vec![
+        create_span!("Messages Processed: {}", data.message_count),
+        create_span!("Avg Arrival Interval: {:.2} ms", data.avg_arrival_interval),
+        create_span!("Avg Processing Time: {:.2} ms", data.avg_processing_time),
+    ]))
     .block(
         Block::default()
             .borders(Borders::ALL)
@@ -234,7 +212,7 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
     // Dataset for chart
     let price_dataset = vec![Dataset::default()
         .name("Prices")
-        .marker(tui::symbols::Marker::Block)
+        .marker(ratatui::symbols::Marker::Block)
         .style(Style::default().fg(Color::Cyan))
         .data(&data.prices)];
 
@@ -252,11 +230,11 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
                 .labels(vec![
                     Span::styled(
                         format!("{}", data.prices.first().map(|&(x, _)| x).unwrap_or(0.0)),
-                        Style::default().add_modifier(tui::style::Modifier::BOLD),
+                        Style::default().add_modifier(ratatui::style::Modifier::BOLD),
                     ),
                     Span::styled(
                         format!("{}", data.prices.last().map(|&(x, _)| x).unwrap_or(0.0)),
-                        Style::default().add_modifier(tui::style::Modifier::BOLD),
+                        Style::default().add_modifier(ratatui::style::Modifier::BOLD),
                     ),
                 ]),
         )
@@ -268,11 +246,11 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
                 .labels(vec![
                     Span::styled(
                         format!("{:.2}", price_min),
-                        Style::default().add_modifier(tui::style::Modifier::BOLD),
+                        Style::default().add_modifier(ratatui::style::Modifier::BOLD),
                     ),
                     Span::styled(
                         format!("{:.2}", price_max),
-                        Style::default().add_modifier(tui::style::Modifier::BOLD),
+                        Style::default().add_modifier(ratatui::style::Modifier::BOLD),
                     ),
                 ]),
         );
@@ -284,12 +262,12 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
     let performance_dataset = vec![
         Dataset::default()
             .name("Arrival Interval")
-            .marker(tui::symbols::Marker::Braille)
+            .marker(ratatui::symbols::Marker::Braille)
             .style(Style::default().fg(Color::Yellow))
             .data(&data.arrival_intervals),
         Dataset::default()
             .name("Processing Time")
-            .marker(tui::symbols::Marker::Braille)
+            .marker(ratatui::symbols::Marker::Braille)
             .style(Style::default().fg(Color::Green))
             .data(&data.processing_times),
     ];
@@ -327,7 +305,7 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
                                 .map(|&(x, _)| x)
                                 .unwrap_or(0.0)
                         ),
-                        Style::default().add_modifier(tui::style::Modifier::BOLD),
+                        Style::default().add_modifier(ratatui::style::Modifier::BOLD),
                     ),
                     Span::styled(
                         format!(
@@ -337,7 +315,7 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
                                 .map(|&(x, _)| x)
                                 .unwrap_or(0.0)
                         ),
-                        Style::default().add_modifier(tui::style::Modifier::BOLD),
+                        Style::default().add_modifier(ratatui::style::Modifier::BOLD),
                     ),
                 ]),
         )
@@ -364,7 +342,7 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
                                 .map(|&(_, y)| y)
                                 .fold(f64::INFINITY, f64::min)
                         ),
-                        Style::default().add_modifier(tui::style::Modifier::BOLD),
+                        Style::default().add_modifier(ratatui::style::Modifier::BOLD),
                     ),
                     Span::styled(
                         format!(
@@ -374,7 +352,7 @@ pub fn render_ui<B: Backend>(f: &mut tui::Frame<B>, data: RenderData) {
                                 .map(|&(_, y)| y)
                                 .fold(f64::NEG_INFINITY, f64::max)
                         ),
-                        Style::default().add_modifier(tui::style::Modifier::BOLD),
+                        Style::default().add_modifier(ratatui::style::Modifier::BOLD),
                     ),
                 ]),
         );
