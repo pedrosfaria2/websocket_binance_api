@@ -16,7 +16,7 @@ pub async fn run(
     storage: &Arc<RwLock<AggTradeStorage>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let (shutdown_tx, mut shutdown_rx) = mpsc::channel(1);
-    let (_, mut ws_shutdown_rx) = oneshot::channel();
+    let (ws_shutdown_tx, ws_shutdown_rx) = oneshot::channel();
 
     // Spawn a task to handle shutdown
     tokio::spawn(async move {
@@ -31,10 +31,18 @@ pub async fn run(
 
     // Subscribe to streams
     subscribe_to_streams(&mut write, &streams, base_id).await?;
+    let storage_clone = Arc::clone(storage);
+    // Handle incoming messages
+    let handle = tokio::spawn(async move {
+        handle_aggtrade_messages(&mut read, &storage_clone, &mut shutdown_rx).await;
+        let _ = ws_shutdown_tx.send(());
+    });
+
     // Start ping
-    start_ping(&mut write, &mut ws_shutdown_rx).await;
+    start_ping(&mut write, ws_shutdown_rx).await;
     // Await the handle to ensure proper handling
-    handle_aggtrade_messages(&mut read, &storage, &mut shutdown_rx).await;
+    handle.await?;
+
     // Unsubscribe from streams
     unsubscribe_from_streams(&mut write, &streams, base_id + 1000).await?;
 

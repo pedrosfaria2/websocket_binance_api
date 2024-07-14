@@ -8,7 +8,7 @@ This project is a comprehensive WebSocket client designed to interact with the B
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Usage](#usage)
-   - [Menu Options](#menu-options)
+  - [Menu Options](#menu-options)
 - [Project Structure](#project-structure)
 - [Running Tests](#running-tests)
 - [License](#license)
@@ -30,17 +30,20 @@ This project is a comprehensive WebSocket client designed to interact with the B
 ## Installation
 
 1. Clone the repository:
+
     ```sh
     git clone https://github.com/pedrosfaria2/websocket_binance_api.git
     cd websocket_binance_api
     ```
 
 2. Build the project:
+
     ```sh
     cargo build
     ```
 
 3. Run the tests:
+
     ```sh
     cargo test
     ```
@@ -48,11 +51,10 @@ This project is a comprehensive WebSocket client designed to interact with the B
 ## Usage
 
 1. Run the WebSocket client:
+
     ```sh
     cargo run
     ```
-   
-
 
 2. Follow the on-screen menu to subscribe to various streams.
 3. *Only the AggTrade has been implemented so far!*
@@ -84,6 +86,7 @@ The project is organized into several modules to enhance modularity and maintain
 ## Running Tests
 
 The project includes unit tests for various components. To run the tests, use the following command:
+
 ```sh
 cargo test
 ```
