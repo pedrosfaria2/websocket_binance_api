@@ -2,9 +2,9 @@ use crate::storage::aggtrade_storage::AggTradeStorage;
 use crate::websocket::client::run::run;
 use crate::websocket::client::{BINANCE_WS_COMBINED_URL, BINANCE_WS_URL};
 use inquire::{MultiSelect, Select};
-use tokio::time::Sleep;
 use std::io::{self, Write};
 use std::sync::{Arc, RwLock};
+use tokio::time::Sleep;
 
 /// Displays the main menu and processes user selections
 pub async fn show_menu(symbols: &Vec<String>) {
@@ -48,7 +48,11 @@ pub async fn show_menu(symbols: &Vec<String>) {
 }
 
 /// Subscribes to a single stream type (aggTrade, trade)
-async fn subscribe(stream_type: &str, storage: &Arc<RwLock<AggTradeStorage>>, symbols: &Vec<String>) {
+async fn subscribe(
+    stream_type: &str,
+    storage: &Arc<RwLock<AggTradeStorage>>,
+    symbols: &Vec<String>,
+) {
     if let Some(symbol) = select_symbol(symbols) {
         let url = format!("{}{}@{}", BINANCE_WS_URL, symbol, stream_type);
         process_subscription(&url, &vec![format!("{}@{}", symbol, stream_type)], storage).await;
@@ -56,12 +60,16 @@ async fn subscribe(stream_type: &str, storage: &Arc<RwLock<AggTradeStorage>>, sy
 }
 
 /// Subscribes to a stream type with interval (kline)
-async fn subscribe_with_interval(stream_type: &str, storage: &Arc<RwLock<AggTradeStorage>>, symbols: &Vec<String>) {
+async fn subscribe_with_interval(
+    stream_type: &str,
+    storage: &Arc<RwLock<AggTradeStorage>>,
+    symbols: &Vec<String>,
+) {
     let symbol_selection = select_symbol(symbols);
     if let Some(symbol) = symbol_selection {
         const INTERVALS: [&str; 16] = [
-            "1s", "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d",
-            "3d", "1w", "1M",
+            "1s", "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d",
+            "1w", "1M",
         ];
         if let Some(interval) = select_interval(INTERVALS.to_vec()) {
             let url = format!("{}{}@{}_{}", BINANCE_WS_URL, symbol, stream_type, interval);
@@ -89,8 +97,8 @@ async fn custom_subscribe(storage: &Arc<RwLock<AggTradeStorage>>, symbols: &Vec<
     for stream in &selected_streams {
         if *stream == "kline" {
             const INTERVALS: [&str; 16] = [
-                "1s", "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h",
-                "1d", "3d", "1w", "1M",
+                "1s", "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d",
+                "3d", "1w", "1M",
             ];
             if let Some(interval) = select_interval(INTERVALS.to_vec()) {
                 for symbol in &selected_symbols {
@@ -133,7 +141,9 @@ fn wait_for_shutdown() -> Sleep {
 
 /// Selects a symbol from the list of symbols
 fn select_symbol(symbols: &Vec<String>) -> Option<String> {
-    Select::new("Choose a symbol:", symbols.to_vec()).prompt().ok()
+    Select::new("Choose a symbol:", symbols.to_vec())
+        .prompt()
+        .ok()
 }
 
 /// Selects an interval from the list of intervals

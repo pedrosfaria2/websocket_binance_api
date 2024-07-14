@@ -7,14 +7,14 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use futures_util::StreamExt;
+use ratatui::backend::CrosstermBackend;
+use ratatui::Terminal;
 use serde_json::Value;
 use std::io::stdout;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::protocol::Message;
-use ratatui::backend::CrosstermBackend;
-use ratatui::Terminal;
 
 pub async fn handle_aggtrade_messages<S>(
     read: &mut S,

@@ -26,13 +26,13 @@ pub struct RenderData<'a> {
     pub processing_times: &'a [(f64, f64)],
 }
 
-macro_rules! create_span {
+/*macro_rules! create_span {
     ($($arg:tt)*) => {
         Span::raw(format!($($arg)*))
     };
-}
+}*/
 
-pub fn render_ui(f: &mut ratatui::Frame<>, data: &RenderData) {
+pub fn render_ui(f: &mut ratatui::Frame, data: &RenderData) {
     // Layout with four vertical chunks
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -117,27 +117,44 @@ pub fn render_ui(f: &mut ratatui::Frame<>, data: &RenderData) {
         .split(chunks[1]);
 
     // Statistics paragraph column 1
-    let stats_column_1 = Paragraph::new(Line::from(vec![
-        create_span!("Last Price: {:.2}", data.last_price),
-        create_span!("Average Price: {:.2}", data.avg_price),
-        create_span!("Median Price: {:.2}", data.median_price),
-        create_span!("Max Price: {:.2}", data.max_price),
-        create_span!("Min Price: {:.2}", data.min_price),
-        create_span!("EMA: {:.2}", data.ema),
-        create_span!("SMA: {:.2}", data.sma),
-    ]))
+    let stats_column_1 = Paragraph::new(vec![
+        Line::from(vec![Span::raw(format!(
+            "Last Price: {:.2}",
+            data.last_price
+        ))]),
+        Line::from(vec![Span::raw(format!(
+            "Average Price: {:.2}",
+            data.avg_price
+        ))]),
+        Line::from(vec![Span::raw(format!(
+            "Median Price: {:.2}",
+            data.median_price
+        ))]),
+        Line::from(vec![Span::raw(format!("Max Price: {:.2}", data.max_price))]),
+        Line::from(vec![Span::raw(format!("Min Price: {:.2}", data.min_price))]),
+        Line::from(vec![Span::raw(format!("EMA: {:.2}", data.ema))]),
+        Line::from(vec![Span::raw(format!("SMA: {:.2}", data.sma))]),
+    ])
     .block(Block::default().borders(Borders::ALL).title("Statistics"));
 
-    // Render statistics column 1
     f.render_widget(stats_column_1, stats_chunks[0]);
 
-    // Statistics paragraph column 2
-    let stats_column_2 = Paragraph::new(Line::from(vec![
-        create_span!("VWAP: {:.2}", data.volume_weighted_avg_price),
-        create_span!("Total Volume: {:.4}", data.total_volume),
-        create_span!("Standard Deviation: {:.2}", data.std_dev),
-        create_span!("RSI: {:.2}", data.rsi),
-    ]))
+    // Statistics in column 2
+    let stats_column_2 = Paragraph::new(vec![
+        Line::from(vec![Span::raw(format!(
+            "VWAP: {:.2}",
+            data.volume_weighted_avg_price
+        ))]),
+        Line::from(vec![Span::raw(format!(
+            "Total Volume: {:.4}",
+            data.total_volume
+        ))]),
+        Line::from(vec![Span::raw(format!(
+            "Standard Deviation: {:.2}",
+            data.std_dev
+        ))]),
+        Line::from(vec![Span::raw(format!("RSI: {:.2}", data.rsi))]),
+    ])
     .block(
         Block::default()
             .borders(Borders::ALL)
@@ -182,12 +199,21 @@ pub fn render_ui(f: &mut ratatui::Frame<>, data: &RenderData) {
     // Render the buyer maker gauge
     f.render_widget(buyer_maker_gauge, stats_chunks[2]);
 
-    // Performance statistics paragraph
-    let performance_stats = Paragraph::new(Line::from(vec![
-        create_span!("Messages Processed: {}", data.message_count),
-        create_span!("Avg Arrival Interval: {:.2} ms", data.avg_arrival_interval),
-        create_span!("Avg Processing Time: {:.2} ms", data.avg_processing_time),
-    ]))
+    // Performance statistics
+    let performance_stats = Paragraph::new(vec![
+        Line::from(vec![Span::raw(format!(
+            "Messages Processed: {}",
+            data.message_count
+        ))]),
+        Line::from(vec![Span::raw(format!(
+            "Avg Arrival Interval: {:.2} ms",
+            data.avg_arrival_interval
+        ))]),
+        Line::from(vec![Span::raw(format!(
+            "Avg Processing Time: {:.2} ms",
+            data.avg_processing_time
+        ))]),
+    ])
     .block(
         Block::default()
             .borders(Borders::ALL)
