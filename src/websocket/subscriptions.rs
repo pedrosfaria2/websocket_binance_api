@@ -1,4 +1,4 @@
-pub fn subscribe_message(streams: Vec<String>, id: u64) -> String {
+pub fn subscribe_message(streams: &Vec<String>, id: u64) -> String {
     // Create subscribe message as a JSON string
     serde_json::json!({
         "method": "SUBSCRIBE",
@@ -8,7 +8,7 @@ pub fn subscribe_message(streams: Vec<String>, id: u64) -> String {
     .to_string()
 }
 
-pub fn unsubscribe_message(streams: Vec<String>, id: u64) -> String {
+pub fn unsubscribe_message(streams: &Vec<String>, id: u64) -> String {
     // Create unsubscribe message as a JSON string
     serde_json::json!({
         "method": "UNSUBSCRIBE",
@@ -28,7 +28,7 @@ mod tests {
         // Test for subscribe message creation
         let streams = vec!["btcusdt@aggTrade".to_string(), "ethusdt@trade".to_string()];
         let id = 1;
-        let message = subscribe_message(streams.clone(), id);
+        let message = subscribe_message(&streams, id);
         let expected_message = json!({
             "method": "SUBSCRIBE",
             "params": streams,
@@ -43,7 +43,7 @@ mod tests {
         // Test for unsubscribe message creation
         let streams = vec!["btcusdt@aggTrade".to_string(), "ethusdt@trade".to_string()];
         let id = 1;
-        let message = unsubscribe_message(streams.clone(), id);
+        let message = unsubscribe_message(&streams, id);
         let expected_message = json!({
             "method": "UNSUBSCRIBE",
             "params": streams,

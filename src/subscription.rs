@@ -12,8 +12,8 @@ struct ExchangeInfo {
 }
 
 pub async fn fetch_symbols() -> Result<Vec<String>, Error> {
-    let url = "https://api.binance.com/api/v3/exchangeInfo";
-    let response = reqwest::get(url).await?.json::<ExchangeInfo>().await?;
+    const URL: &str = "https://api.binance.com/api/v3/exchangeInfo";
+    let response = reqwest::get(URL).await?.json::<ExchangeInfo>().await?;
     Ok(response
         .symbols
         .into_iter()

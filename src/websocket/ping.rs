@@ -4,7 +4,7 @@ use tokio::sync::oneshot;
 use tokio::time::{interval, Duration};
 use tokio_tungstenite::tungstenite::protocol::Message;
 
-pub async fn start_ping<W>(write: &mut W, mut shutdown_rx: oneshot::Receiver<()>)
+pub async fn start_ping<W>(write: &mut W, shutdown_rx: &mut oneshot::Receiver<()>)
 where
     W: SinkExt<Message> + Unpin,
     <W as futures_util::Sink<Message>>::Error: Debug,
@@ -15,8 +15,9 @@ where
             _ = ping_interval.tick() => {
                 // Send ping message at regular intervals
                 write.send(Message::Ping(Vec::new())).await.unwrap();
+                break;
             },
-            _ = &mut shutdown_rx => {
+            _ = shutdown_rx => {
                 // Shutdown WebSocket connection
                 println!("Shutting down WebSocket...");
                 write.send(Message::Close(None)).await.unwrap();
@@ -77,10 +78,10 @@ mod tests {
     #[tokio::test]
     async fn test_start_ping() {
         let (mut mock_sink, mut rx) = MockSink::new();
-        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+        let (shutdown_tx, mut shutdown_rx) = oneshot::channel();
 
         tokio::spawn(async move {
-            start_ping(&mut mock_sink, shutdown_rx).await;
+            start_ping(&mut mock_sink, &mut shutdown_rx).await;
         });
 
         tokio::time::sleep(Duration::from_secs(1)).await;

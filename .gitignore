@@ -43,7 +43,6 @@ nbdist/
 *.swn
 
 # Visual Studio Code
-.vscode/
 .history/
 .vscode-test/
 

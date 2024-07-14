@@ -1,0 +1,46 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'binance_ws'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=binance_ws",
+                    "--package=binance_ws"
+                ],
+                "filter": {
+                    "name": "binance_ws",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "console": "externalTerminal"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'binance_ws'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=binance_ws",
+                    "--package=binance_ws"
+                ],
+                "filter": {
+                    "name": "binance_ws",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
