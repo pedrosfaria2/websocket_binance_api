@@ -13,8 +13,8 @@ use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::protocol::Message;
-use tui::backend::CrosstermBackend;
-use tui::Terminal;
+use ratatui::backend::CrosstermBackend;
+use ratatui::Terminal;
 
 pub async fn handle_aggtrade_messages<S>(
     read: &mut S,
@@ -34,7 +34,7 @@ pub async fn handle_aggtrade_messages<S>(
     // Channel for user input shutdown signal
     let (input_tx, mut input_rx) = mpsc::channel(1);
     tokio::spawn(async move {
-        handle_input(input_tx).await;
+        handle_input(&input_tx).await;
     });
 
     let mut message_count: u64 = 0;
@@ -123,7 +123,7 @@ pub async fn handle_aggtrade_messages<S>(
 
                                 // Draw UI
                                 terminal.draw(|f| {
-                                    render_ui(f, render_data);
+                                    render_ui(f, &render_data);
                                 }).unwrap();
                             }
                         }
