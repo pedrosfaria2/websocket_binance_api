@@ -5,7 +5,7 @@ use tokio_tungstenite::tungstenite::protocol::Message;
 /// Subscribe to specified streams.
 pub async fn subscribe_to_streams<S>(
     write: &mut S,
-    streams: &[String],
+    streams: &Vec<String>,
     base_id: u64,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
@@ -13,7 +13,7 @@ where
     <S as futures_util::Sink<Message>>::Error: std::error::Error + 'static,
 {
     // Create the subscription message.
-    let subscribe_msg = subscribe_message(streams.to_vec(), base_id);
+    let subscribe_msg = subscribe_message(streams, base_id);
     println!("Subscribe Payload: {}", subscribe_msg);
 
     // Send the subscription message.

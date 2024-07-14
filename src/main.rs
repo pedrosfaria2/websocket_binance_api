@@ -8,5 +8,9 @@ use menu::show_menu;
 
 #[tokio::main]
 async fn main() {
-    show_menu().await;
+    let symbols = subscription::fetch_symbols().await;
+    match symbols {
+        Ok(symbols) => show_menu(&symbols).await,
+        Err(e) => eprintln!("Error fetching symbols: {}", e),
+    }
 }
