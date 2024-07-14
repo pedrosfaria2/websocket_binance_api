@@ -17,9 +17,9 @@ use tui::backend::CrosstermBackend;
 use tui::Terminal;
 
 pub async fn handle_aggtrade_messages<S>(
-    mut read: S,
-    storage: Arc<RwLock<AggTradeStorage>>,
-    mut shutdown_rx: mpsc::Receiver<()>,
+    read: &mut S,
+    storage: &Arc<RwLock<AggTradeStorage>>,
+    shutdown_rx: &mut mpsc::Receiver<()>,
 ) where
     S: StreamExt<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
 {

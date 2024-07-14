@@ -119,8 +119,8 @@ impl AggTradeStorage {
     }
 
     // Get all trades
-    pub fn get_trades(&self) -> Vec<AggTrade> {
-        self.trades.iter().cloned().collect()
+    pub fn get_trades(&self) -> &VecDeque<AggTrade> {
+        &self.trades
     }
 
     // Calculate the average price of trades
